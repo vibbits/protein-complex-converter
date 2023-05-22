@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "protein-complex-converter"
+version = "0.1.0"
+description = ""
+authors = ["James Collier <james.collier@vib.be>"]
+readme = "README.md"
+packages = [{include = "protein_complex_converter"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
