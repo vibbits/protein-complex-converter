@@ -1,5 +1,7 @@
 import csv
 from dataclasses import dataclass
+from io import StringIO
+from typing import Iterable
 
 @dataclass
 class Row:
@@ -8,6 +10,8 @@ class Row:
 
 @dataclass
 class MitabRow:
+    uida: str
+    uidb: str
     
 
 def extract_id(name: str) -> str:
@@ -25,4 +29,18 @@ def parse_complex_tab(ct: str) -> None:
         for row in reader
     ]
 
-def convert_to_mitab(rows: list[Row]) -> list:
+def convert_to_mitab(rows: list[Row]) -> list[MitabRow]:
+    for row in rows:
+        for id in row.uniprot_ids:
+            yield MitabRow(
+                uida = row.complex, 
+                uidb = id
+            )
+
+def serialize_to_mitab(rows: Iterable[MitabRow]) -> str:
+    mitab = StringIO()
+    writer = csv.DictWriter(mitab, fieldnames=["#uidA","uidB"], dialect="excel-tab")
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({"#uidA":row.uida,"uidB":row.uidb})
+    return mitab.getvalue()
