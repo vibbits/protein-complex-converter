@@ -8,6 +8,9 @@ packages = [{include = "protein_complex_converter"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
+bs4 = "^0.0.1"
+bio = "^1.5.9"
+lxml = "^4.9.2"
 
 
 
