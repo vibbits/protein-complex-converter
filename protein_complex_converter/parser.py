@@ -44,8 +44,8 @@ def extract_first_author(pmid_esearch:str) -> str:
 def parse_complex_tab(ct: str) -> None:
     reader = csv.DictReader(ct.splitlines(), delimiter="\t")
     rows = []
-    first_author_name = []
     for row in reader:
+        first_author_name = []
         pubmed_ids = [extract_pubmed_id(crossref) for crossref in row["Cross references"
         ].split("|") if 'pubmed:' in crossref]
         for pmid in pubmed_ids:
@@ -56,8 +56,8 @@ def parse_complex_tab(ct: str) -> None:
             uniprot_ids=[extract_id(name) for name in row[
                 "Identifiers (and stoichiometry) of molecules in complex"
             ].split("|")],
-            pubmed_ids= pubmed_ids,
-            first_author_name = first_author_name
+            pubmed_ids= '|'.join(pubmed_ids),
+            first_author_name = '|'.join(first_author_name)
         ))
     return rows
 
@@ -68,8 +68,8 @@ def convert_to_mitab(rows: list[Row]) -> list[MitabRow]:
             yield MitabRow(
                 uida = row.complex, 
                 uidb = id,
-                author = row.first_author_name[0],
-                pmids = row.pubmed_ids[0]
+                author = row.first_author_name,
+                pmids = row.pubmed_ids
             )
 
 # Serialize the mitab results
