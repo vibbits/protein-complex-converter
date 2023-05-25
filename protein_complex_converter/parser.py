@@ -18,6 +18,12 @@ class Row:
 	interactiontype: str
 	source: str
 	interactionidentifiers: list[str]
+	expansion: str
+	bio_role_A: str
+	bio_role_B: str
+	exp_role_A: str
+	exp_role_B: str 
+	interactortype_A: str
 	xref: list[str]
 	taxid: str
 
@@ -33,6 +39,12 @@ class MitabRow:
 	interactiontype: str
 	sourcedb: str
 	interactionidentifiers: str
+	expansion: str
+	bio_role_A: str
+	bio_role_B: str
+	exp_role_A: str
+	exp_role_B: str
+	interactortype_A: str
 	xref: str
 	host_org_taxid: str
     
@@ -64,10 +76,6 @@ def extract_first_author(xml:str) -> str:
 	last_name_with_year = last_name + " " + "et al. " + "(" + publication_year + ")"
 	return last_name_with_year
 
-# Extract the taxonomy identifier of the interaction, host organism
-def extract_taxid(taxid:int) -> str:
-	return "taxid:"+taxid+"(Homo sapiens)"
-
 # Extract the interaction identifiers
 def extract_interaction_identifiers(column1:str, column2:list[str]) -> str:
 	interaction_identifiers = []
@@ -78,6 +86,12 @@ def extract_interaction_identifiers(column1:str, column2:list[str]) -> str:
 		if not ref.startswith('pubmed'):
 			interaction_identifiers.append(ref)
 	return '|'.join(interaction_identifiers)
+
+# Extract the interactor types 
+
+# Extract the taxonomy identifier of the interaction, host organism
+def extract_taxid(taxid:int) -> str:
+	return "taxid:"+taxid+"(Homo sapiens)"
 
 
 # Get the complex, uniprot and pubmed identifiers and parse first author from pmid
@@ -105,6 +119,12 @@ def parse_complex_tab(ct: str) -> None:
 			interactiontype = "NA",
 			source = row["Source"],
 			interactionidentifiers = interactionidentifiers,
+			expansion = "bipartite",
+			bio_role_A = 'psi-mi:"MI:0000"(unspecified)',
+			bio_role_B = 'psi-mi:"MI:0000"(unspecified)',
+			exp_role_A = 'psi-mi:"MI:0000"(unspecified)',
+			exp_role_B = 'psi-mi:"MI:0000"(unspecified)',
+			interactortype_A = 'psi-mi:"MI:0315"(protein complex)',
 			xref = row["Go Annotations"],
 			taxid = extract_taxid(row["Taxonomy identifier"])
 		))
@@ -126,6 +146,12 @@ def convert_to_mitab(rows: list[Row]) -> list[MitabRow]:
 				interactiontype = row.interactiontype,
 				sourcedb = row.source,
 				interactionidentifiers = row.interactionidentifiers,
+				expansion = row.expansion,
+				bio_role_A = row.bio_role_A,
+				bio_role_B = row.bio_role_B,
+				exp_role_A = row.exp_role_A,
+				exp_role_B = row.exp_role_B,
+				interactortype_A = row.interactortype_A,
 				xref = row.xref,
 				host_org_taxid = row.taxid
 			)
@@ -134,11 +160,14 @@ def convert_to_mitab(rows: list[Row]) -> list[MitabRow]:
 def serialize_to_mitab(rows: Iterable[MitabRow]) -> str:
 	mitab = StringIO() # StringIO: set string as object file
 	writer = csv.DictWriter(mitab, fieldnames=["#uidA","uidB","method","author","pmids","taxa","taxb","interactionType","sourcedb",
-	"interactionIdentifier","xrefs_Interaction","Host_organism_taxid"], 
+	"interactionIdentifier","expansion","biological_role_A","biological_role_B","experimental_role_A","experimental_role_B",
+	"interactor_type_A","xrefs_Interaction","Host_organism_taxid"], 
 	dialect="excel-tab", quoting=csv.QUOTE_NONE, quotechar='')
 	writer.writeheader()
 	for row in rows:
 		writer.writerow({"#uidA":row.uida,"uidB":row.uidb,"method":row.method,"author":row.author,"pmids":row.pmids,"taxa":row.taxa,"taxb":row.taxb,
-		"interactionType":row.interactiontype,"sourcedb":row.sourcedb,"interactionIdentifier":row.interactionidentifiers,"xrefs_Interaction":row.xref,"Host_organism_taxid":row.host_org_taxid})
+		"interactionType":row.interactiontype,"sourcedb":row.sourcedb,"interactionIdentifier":row.interactionidentifiers,"expansion":row.expansion,
+		"biological_role_A":row.bio_role_A,"biological_role_B":row.bio_role_B,"experimental_role_A":row.bio_role_A,"experimental_role_B":row.exp_role_B,
+		"interactor_type_A":row.interactortype_A,"xrefs_Interaction":row.xref,"Host_organism_taxid":row.host_org_taxid})
 	return mitab.getvalue()
 
