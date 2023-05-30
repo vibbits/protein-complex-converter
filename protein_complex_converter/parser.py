@@ -153,9 +153,28 @@ def extract_interactor_type(uniprot_id:str) -> str:
 	else:
 		return'psi-mi:"MI:0326"(protein)'
 
-# Extract the taxonomy identifier of the interaction, host organism
-def extract_taxid(taxid:int) -> str:
-	return "taxid:"+str(taxid)+"(Homo sapiens)"
+# Get taxonomy xml for all taxids at once 
+def get_taxid_xml(taxids):
+	taxonomy_base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&retmode=xml&rettype=abstract"
+	response = req.get(taxonomy_base_url+'&id='+ taxids)
+	print(taxonomy_base_url+'&id='+ taxids)
+	xml = response.text
+	return xml
+
+# Parse taxonomy xml to get the scientific name of the organism starting from NCBI taxid
+def extract_organism(xml:str) -> str:
+	soup = BeautifulSoup(xml, 'xml')
+	organisms = soup.find_all('Taxon')
+
+	for organism in organisms:
+		for child in organism.find_all('Taxon'):
+			child.decompose()
+		
+		scientific_name_tag = organism.find('ScientificName')
+		if scientific_name_tag:
+			scientific_name = scientific_name_tag.text.strip()
+	return scientific_name
+	
 
 # Get the current date
 def get_current_date():
@@ -182,6 +201,8 @@ def parse_complex_tab(ct: str) -> None:
 		interactortype_B = [extract_interactor_type(uniprot_id) for uniprot_id in uniprot_ids]
 		stoichiometry_B = [int(extract_stoichiometry(name)) for name in row["Identifiers (and stoichiometry) of molecules in complex"]
 		.split("|")]
+		taxids = row["Taxonomy identifier"]
+		taxid = "taxid:"+taxids+"("+extract_organism(get_taxid_xml(taxids))+")"
 
 		rows.append(Row(
 			complex=row["#Complex ac"],
@@ -194,7 +215,7 @@ def parse_complex_tab(ct: str) -> None:
 			first_author_name = '|'.join(first_author_name),
 			pubmed_ids= '|'.join(pubmed_ids),
 			taxa = "-",
-			taxb = "taxid:9606(Homo sapiens)",
+			taxb = taxid,
 			interactiontype = "-",
 			source = row["Source"],
 			interactionidentifiers = interactionidentifiers,
@@ -212,7 +233,7 @@ def parse_complex_tab(ct: str) -> None:
 			annotation_A = "-",
 			annotation_B = "-",
 			annotation_interaction = "-",
-			taxid = extract_taxid(row["Taxonomy identifier"]),
+			taxid = taxid,
 			params_interaction = "-",
 			creation_date = get_current_date(),
 			update_date = get_current_date(),
@@ -227,7 +248,6 @@ def parse_complex_tab(ct: str) -> None:
 			identification_method_A = "-",
 			identification_method_B = "-"
 		))
-		print(extract_first_author)
 	return rows
 
 # Convert the complex ids and uniprot ids into mitab format
