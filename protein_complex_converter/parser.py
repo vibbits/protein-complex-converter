@@ -165,6 +165,7 @@ def get_taxid_xml(taxids):
 def extract_organism(xml:str) -> str:
 	soup = BeautifulSoup(xml, 'xml')
 	organisms = soup.find_all('Taxon')
+	scientific_name = ""
 
 	for organism in organisms:
 		for child in organism.find_all('Taxon'):
