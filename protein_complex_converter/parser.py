@@ -5,6 +5,8 @@ from typing import Iterable
 from bs4 import BeautifulSoup
 from Bio import Entrez
 from datetime import date
+import requests as req
+import xml.etree.ElementTree as et
 
 # Define classes for the data to use
 @dataclass
@@ -106,24 +108,28 @@ def extract_id(name: str) -> str:
 def extract_pubmed_id(crossref:str) -> str:
 	return crossref.split("(")[0] 
 
-# Parse pubmed xml to get first author and publication year
+# Get pubmed xml for all pubmed ids at once 
 def get_pubmedArticles(pubmed_ids):
 	pubmed_base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&retmode=xml&rettype=abstract"
-	response = req.get(pubmed_base_url+'&id='+str(pubmed_ids))
+	response = req.get(pubmed_base_url+'&id='+','.join([s.removeprefix('pubmed:') for s in pubmed_ids]))
+	print(pubmed_base_url+'&id='+','.join([s.removeprefix('pubmed:') for s in pubmed_ids]))
 	xml = response.text
 	pubmedArticleSet = et.fromstring(xml)
 	return xml
 
-# Extract first authors using pubmed ids
+# Parse pubmed xml to get first author and publication year
 def extract_first_author(xml:str) -> str:
-	xml_data = xml
-	soup = BeautifulSoup(xml_data, 'xml')
-	author_list = soup.find_all('Author')
-	first_author = author_list[0]
-	last_name = first_author.find('LastName').text
-	publication_year = soup.find('PubDate').find('Year').text
-	last_name_with_year = last_name + " " + "et al. " + "(" + publication_year + ")"
-	return last_name_with_year
+	soup = BeautifulSoup(xml, 'xml')
+	articles = soup.find_all('PubmedArticle')
+	author_names = []
+	for article in articles:
+		author_list = article.find_all('Author')
+		first_author = author_list[0]
+		last_name = first_author.find('LastName').text
+		publication_year = article.find('PubDate').find('Year').text
+		last_name_with_year = last_name + " " + "et al. " + "(" + publication_year + ")"
+		author_names.append(last_name_with_year)
+	return '|'.join(author_names)
 
 # Extract the interaction identifiers
 def extract_interaction_identifiers(column1:str, column2:list[str]) -> str:
@@ -169,9 +175,7 @@ def parse_complex_tab(ct: str) -> None:
 		first_author_name = []
 		pubmed_ids = [extract_pubmed_id(crossref) for crossref in row["Cross references"
 		].split("|") if 'pubmed:' in crossref]
-		for pmid in pubmed_ids:
-			first_author_name.append(extract_first_author(Entrez.efetch(db='pubmed', id=pmid.split('pubmed:')[1], retmode='xml')))
-			time.sleep(0.3)
+		first_author_name.append(extract_first_author(get_pubmedArticles(pubmed_ids)))
 		uniprot_ids = [extract_id(name) for name in row["Identifiers (and stoichiometry) of molecules in complex"
 		].split("|")]
 		interactionidentifiers = extract_interaction_identifiers(row["Experimental evidence"], list(row["Cross references"].split('|')))
@@ -223,7 +227,7 @@ def parse_complex_tab(ct: str) -> None:
 			identification_method_A = "-",
 			identification_method_B = "-"
 		))
-		print(stoichiometry_B)
+		print(extract_first_author)
 	return rows
 
 # Convert the complex ids and uniprot ids into mitab format
